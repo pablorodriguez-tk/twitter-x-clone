@@ -4,6 +4,7 @@ import { AuthButtonServer } from "./components/auth-button-server";
 import { redirect } from "next/navigation";
 import { PostLists } from "./components/posts-list";
 import { Database } from "./types/database";
+import { ComposePost } from "./components/compose-post";
 
 export default async function Home() {
   const supabase = createServerComponentClient<Database>({ cookies });
@@ -13,16 +14,24 @@ export default async function Home() {
 
   if (session === null) redirect("/login");
 
-  const { data: posts } = await supabase
+  const { data } = await supabase
     .from("posts")
-    .select("*, user:users(*)");
+    .select("*, user:users(*)")
+    .order("created_at", { ascending: false });
+
+  const posts =
+    data?.map((post) => ({
+      ...post,
+      user: Array.isArray(post.user) ? post.user[0] : post.user,
+    })) ?? [];
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between">
-      <section className="max-w-[800px] mx-auto border-l border-r border-white/30 min-h-screen">
-        <AuthButtonServer />
+      <section className="max-w-[800px] w-full mx-auto border-l border-r border-white/30 min-h-screen">
+        <ComposePost userAvatarUrl={session.user?.user_metadata?.avatar_url} />
         <PostLists posts={posts} />
       </section>
+      <AuthButtonServer />
     </main>
   );
 }
